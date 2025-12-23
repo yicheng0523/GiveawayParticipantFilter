@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>社群抽獎部隊過濾器</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        :root {
+            --bg-color: #f0f2f5;
+            --card-bg: #ffffff;
+            --text-main: #1c1e21;
+            --text-sub: #606770;
+            --border-color: #ccd0d5;
+            --btn-run: #d32f2f;
+            --stat-box-bg: #ffffff;
+            --accent-red: #d32f2f;
+            --initial-blue: #3730a3;
+            --initial-bg: #e0e7ff;
+            --captured-red: #991b1b;
+            --captured-bg: #fee2e2;
+        }
+
+        [data-theme="dark"] {
+            --bg-color: #18191a;
+            --card-bg: #242526;
+            --text-main: #e4e6eb;
+            --text-sub: #b0b3b8;
+            --border-color: #3e4042;
+            --btn-run: #e53935;
+            --stat-box-bg: #3a3b3c;
+            --accent-red: #ff5252;
+        }
+
+        body { font-family: "PingFang TC", "Microsoft JhengHei", sans-serif; background-color: var(--bg-color); padding: 30px; color: var(--text-main); transition: 0.4s; min-height: 100vh; margin: 0; }
+        .container { max-width: 900px; margin: auto; background: var(--card-bg); padding: 40px; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.15); margin-bottom: 40px; transition: 0.4s; }
+        
+        .header-area { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; }
+        h2 { color: var(--accent-red); margin: 0; letter-spacing: 2px; flex-grow: 1; text-align: center; padding-left: 40px; }
+        .theme-toggle { background: var(--bg-color); border: 1px solid var(--border-color); width: 40px; height: 40px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 20px; transition: 0.3s; color: var(--text-main); }
+
+        .tool-helper { background: var(--bg-color); border: 1px solid var(--border-color); padding: 25px; border-radius: 10px; text-align: center; margin-bottom: 30px; }
+        .btn-group { display: flex; justify-content: center; gap: 12px; flex-wrap: wrap; margin-top: 15px; }
+        .external-link { text-decoration: none; color: white; padding: 10px 18px; border-radius: 8px; font-weight: bold; font-size: 14px; transition: 0.2s; display: inline-block; border: none; }
+        .btn-fb { background-color: #1877f2; }
+        .btn-ig { background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%); }
+        .btn-pay { background-color: #28a745; }
+
+        .input-group { margin-bottom: 20px; }
+        label { display: block; font-weight: bold; margin-bottom: 10px; }
+        textarea { width: 100%; height: 100px; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; box-sizing: border-box; background: var(--card-bg); color: var(--text-main); font-size: 14px; }
+        input[type="file"] { width: 100%; padding: 10px; border: 1px dashed var(--border-color); border-radius: 8px; background: var(--bg-color); color: var(--text-main); cursor: pointer; }
+        
+        .btn-run { background: var(--btn-run); color: white; border: none; padding: 18px; width: 100%; border-radius: 8px; font-size: 20px; font-weight: bold; cursor: pointer; transition: 0.3s; margin-top: 10px; }
+        .btn-run:hover { transform: scale(1.01); box-shadow: 0 4px 15px rgba(211, 47, 47, 0.3); }
+
+        .dashboard { margin-top: 20px; display: flex; flex-direction: column; gap: 15px; }
+        #status-bar { padding: 15px; border-radius: 8px; font-weight: bold; text-align: center; border: 1px solid var(--border-color); background: var(--bg-color); }
+        .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+        .stat-box { background: var(--stat-box-bg); border: 1px solid var(--border-color); padding: 20px 5px; border-radius: 8px; text-align: center; }
+        .stat-box span { display: block; font-size: 13px; color: var(--text-sub); margin-bottom: 5px; }
+        .stat-box strong { font-size: 42px; color: var(--accent-red); display: block; line-height: 1; }
+
+        /* 抽獎部隊名單區塊 */
+        .result-section { margin-top: 20px; border: 1px solid var(--border-color); border-radius: 10px; padding: 20px; background: var(--stat-box-bg); }
+        .result-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px; }
+        .result-section h3 { margin: 0; font-size: 18px; border-left: 4px solid var(--accent-red); padding-left: 10px; }
+        .legend-note { font-size: 12px; color: var(--text-sub); }
+        .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 4px; }
+        .dot-blue { background: var(--initial-blue); }
+        .dot-red { background: var(--captured-red); }
+
+        .name-tag-container { min-height: 120px; display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-start; justify-content: center; }
+        .placeholder-text { color: var(--text-sub); font-style: italic; align-self: center; margin-top: 40px; }
+        
+        .name-tag { background: var(--captured-bg); color: var(--captured-red); padding: 5px 12px; border-radius: 20px; font-size: 13px; border: 1px solid #fecaca; opacity: 0; transform: translateY(10px); animation: fadeInUp 0.4s forwards; }
+        .initial-tag { background: var(--initial-bg); color: var(--initial-blue); border-color: #c7d2fe; }
+        
+        @keyframes fadeInUp { to { opacity: 1; transform: translateY(0); } }
+
+        .desc { font-size: 13px; color: var(--text-sub); background: rgba(255,193,7,0.1); padding: 15px; border-radius: 8px; margin-top: 30px; border-left: 4px solid #ffc107; line-height: 1.6; }
+        .footer-credit { text-align: center; color: #adb5bd; font-size: 11px; padding: 20px 0; line-height: 1.6; }
+    </style>
+</head>
+<body data-theme="light">
+
+<div class="container">
+    <div class="header-area">
+        <h2>社群抽獎部隊過濾器</h2>
+        <button id="themeToggle" class="theme-toggle" onclick="manualToggle()">☀️</button>
+    </div>
+
+    <div class="tool-helper">
+        <p style="margin:0; font-weight:bold; color:var(--text-main);">建議使用「抽獎小幫手」付費版工具匯出留言清單</p>
+        <div class="btn-group">
+            <a href="https://www.luckyhelpers.com/" target="_blank" class="external-link btn-fb">Facebook 貼文留言匯出</a>
+            <a href="https://www.luckyhelpers.com/instagram" target="_blank" class="external-link btn-ig">Instagram 貼文留言匯出</a>
+            <a href="https://www.luckyhelpers.com/order" target="_blank" class="external-link btn-pay">「抽獎小幫手」付費頁面</a>
+        </div>
+    </div>
+
+    <div class="input-group">
+        <label>1. 經人工檢核確認之抽獎部隊帳號：</label>
+        <textarea id="nameInput" placeholder="請以半形逗號（,）分隔輸入名單..."></textarea>
+    </div>
+
+    <div class="input-group">
+        <label>2. 上傳留言 Excel (.xlsx)：</label>
+        <input type="file" id="fileUpload" accept=".xlsx">
+    </div>
+
+    <button class="btn-run" onclick="runAnalysis()">抽獎部隊！現形吧！</button>
+
+    <div class="dashboard">
+        <div id="status-bar">系統狀態：待命輸入資料</div>
+        <div class="stats-grid">
+            <div class="stat-box"><span>初始名單</span><strong id="stat-initial">0</strong></div>
+            <div class="stat-box"><span>系統捕獲</span><strong id="stat-captured">0</strong></div>
+            <div class="stat-box"><span>總計人數</span><strong id="stat-total-names">0</strong></div>
+            <div class="stat-box"><span>刪除筆數</span><strong id="stat-deleted">0</strong></div>
+        </div>
+    </div>
+
+    <div class="result-section">
+        <div class="result-header">
+            <h3>抽獎部隊名單</h3>
+            <div class="legend-note">
+                <span class="dot dot-blue"></span>藍色為初始檢核名單 | 
+                <span class="dot dot-red"></span>紅色為系統抓出的關聯帳號
+            </div>
+        </div>
+        <div id="nameListDisplay" class="name-tag-container">
+            <span class="placeholder-text">讓我們看看，抽獎部隊有誰呢？</span>
+        </div>
+        <div id="downloadArea" style="display:none; margin-top:20px; text-align:center;">
+            <button class="external-link" style="background:#6c757d; cursor:pointer;" onclick="downloadNameListTxt()">下載此名冊 (.txt)</button>
+        </div>
+    </div>
+
+    <div class="desc">
+        <strong>分析邏輯說明：</strong><br>
+        系統執行遞迴掃描，偵測標記名單成員的潛在帳號。分析與數據累加同步進行，確保過程即時透明。
+    </div>
+</div>
+
+<div class="footer-credit">
+    社群抽獎部隊過濾器 Beta 20251223<br>
+    Vibe Coding by 曾翊成 via Google Gemini
+</div>
+
+<script>
+    let finalBotList = [];
+    const body = document.body;
+    const themeBtn = document.getElementById('themeToggle');
+
+    function detectColorScheme() {
+        if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+            applyTheme('dark');
+        }
+    }
+    
+    function applyTheme(theme) {
+        body.setAttribute('data-theme', theme);
+        themeBtn.innerText = theme === 'dark' ? '🌙' : '☀️';
+    }
+
+    function manualToggle() {
+        const newTheme = body.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+        applyTheme(newTheme);
+    }
+
+    detectColorScheme();
+
+    function animateValue(id, start, end, duration = 3000) {
+        const obj = document.getElementById(id);
+        let startTimestamp = null;
+        const step = (timestamp) => {
+            if (!startTimestamp) startTimestamp = timestamp;
+            const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+            obj.innerHTML = Math.floor(progress * (end - start) + start);
+            if (progress < 1) window.requestAnimationFrame(step);
+        };
+        window.requestAnimationFrame(step);
+    }
+
+    function runAnalysis() {
+        const nameInputStr = document.getElementById('nameInput').value;
+        const fileInput = document.getElementById('fileUpload');
+        const statusBar = document.getElementById('status-bar');
+        const container = document.getElementById('nameListDisplay');
+
+        if (!nameInputStr.trim() || !fileInput.files[0]) {
+            statusBar.innerText = "系統狀態：請完整填寫名單並上傳檔案";
+            return;
+        }
+
+        statusBar.innerText = "系統狀態：正在執行同步捕獲程序...";
+        container.innerHTML = ""; 
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const data = new Uint8Array(e.target.result);
+            const workbook = XLSX.read(data, { type: 'array' });
+            const rows = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
+
+            const initialNames = nameInputStr.split(',').map(n => n.trim()).filter(n => n !== "");
+            let targetSet = new Set(initialNames);
+            
+            let hasNew = true;
+            while (hasNew) {
+                hasNew = false;
+                const currentTargets = Array.from(targetSet);
+                rows.forEach(row => {
+                    const acc = String(row["帳號"] || "").trim();
+                    const msg = String(row["留言"] || "");
+                    if (!targetSet.has(acc) && currentTargets.some(t => msg.includes(t))) {
+                        targetSet.add(acc);
+                        hasNew = true;
+                    }
+                });
+            }
+
+            finalBotList = Array.from(targetSet).sort();
+            const filteredRows = rows.filter(row => !targetSet.has(String(row["帳號"] || "").trim()));
+
+            animateValue('stat-initial', 0, initialNames.length);
+            animateValue('stat-captured', 0, targetSet.size - initialNames.length);
+            animateValue('stat-total-names', 0, targetSet.size);
+            animateValue('stat-deleted', 0, rows.length - filteredRows.length);
+
+            const totalNames = finalBotList.length;
+            const interval = Math.min(3000 / totalNames, 50);
+
+            finalBotList.forEach((name, index) => {
+                setTimeout(() => {
+                    const span = document.createElement('span');
+                    span.className = 'name-tag' + (initialNames.includes(name) ? ' initial-tag' : '');
+                    span.innerText = name;
+                    container.appendChild(span);
+                }, index * interval);
+            });
+
+            setTimeout(() => {
+                statusBar.innerText = "系統狀態：分析完成，檔案已自動下載";
+                document.getElementById('downloadArea').style.display = "block";
+                
+                const newWorkbook = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(newWorkbook, XLSX.utils.json_to_sheet(filteredRows), "Result");
+                XLSX.writeFile(newWorkbook, "Filtered_List.xlsx");
+            }, 3000);
+        };
+        reader.readAsArrayBuffer(fileInput.files[0]);
+    }
+
+    function downloadNameListTxt() {
+        const blob = new Blob([finalBotList.join(',')], { type: 'text/plain' });
+        const a = document.createElement('a');
+        a.href = window.URL.createObjectURL(blob);
+        a.download = "blacklist.txt";
+        a.click();
+    }
+</script>
+</body>
+</html>
