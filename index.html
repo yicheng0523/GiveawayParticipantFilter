@@ -47,8 +47,9 @@
         .btn-ig { background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%); }
         .btn-pay { background-color: #28a745; }
 
-        .input-group { margin-bottom: 20px; }
-        label { display: block; font-weight: bold; margin-bottom: 10px; }
+        .input-group { margin-bottom: 25px; }
+        .section-title-style { font-size: 18px; font-weight: bold; border-left: 4px solid var(--accent-red); padding-left: 12px; margin: 0; display: block; margin-bottom: 12px; }
+        
         textarea, .file-input-wrapper { width: 100%; box-sizing: border-box; }
         textarea { height: 100px; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-color); color: var(--text-main); font-size: 14px; resize: vertical; display: block; }
         input[type="file"] { width: 100%; padding: 12px; border: 1px dashed var(--border-color); border-radius: 8px; background: var(--bg-color); color: var(--text-main); cursor: pointer; box-sizing: border-box; display: block; }
@@ -58,7 +59,6 @@
 
         .dashboard-section { border: 2px solid var(--border-color); }
         .dashboard-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-        .section-title-style { font-size: 18px; font-weight: bold; border-left: 4px solid var(--accent-red); padding-left: 12px; margin: 0; }
         #status-text { font-size: 14px; color: var(--text-sub); font-weight: normal; margin-left: 10px; }
         
         .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 25px; }
@@ -103,11 +103,11 @@
 
     <div class="section-card">
         <div class="input-group">
-            <label>1. 經人工檢核確認之抽獎部隊帳號：</label>
+            <label class="section-title-style">經人工檢核確認之抽獎部隊帳號</label>
             <textarea id="nameInput" placeholder="請以半形逗號（,）分隔輸入名單..."></textarea>
         </div>
         <div class="input-group" style="margin-bottom:0;">
-            <label>2. 上傳留言 Excel (.xlsx)：</label>
+            <label class="section-title-style">上傳留言名單 Excel 檔</label>
             <div class="file-input-wrapper">
                 <input type="file" id="fileUpload" accept=".xlsx">
             </div>
@@ -185,6 +185,7 @@
 
     function animateValueEaseOut(id, start, end, duration = 5000) {
         const obj = document.getElementById(id);
+        if (!obj) return;
         let startTimestamp = null;
         const step = (timestamp) => {
             if (!startTimestamp) startTimestamp = timestamp;
